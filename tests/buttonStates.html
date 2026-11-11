@@ -1,0 +1,49 @@
+<!doctype html><html lang="zh-CN"><meta charset="UTF-8"><title>按钮样式回归</title>
+<style>body{padding:24px!important}section{max-width:420px;margin-bottom:24px}h2{margin:0 0 12px!important}output{display:block;line-height:22px;overflow-wrap:anywhere}button{margin-bottom:8px!important}#summary{margin-bottom:20px;font-weight:500}</style>
+<div id="app">加载实际组件样式…</div>
+<script type="module">
+import {createApp,h,nextTick} from 'vue';
+import {ElButton} from 'element-plus';
+const sources=import.meta.glob('/src/components/*.vue',{as:'raw',eager:true});
+const modules=import.meta.glob('/src/components/*.vue');
+const cases=[];
+for(const [file,source] of Object.entries(sources)) {
+ if(!/class=["']commit-btn|class="[\s\S]{0,30}commit-btn/.test(source)) continue;
+ const component=(await modules[file]()).default;
+ const scoped=component.__scopeId?{[component.__scopeId]:''}:{};
+ cases.push({name:file.split('/').pop(),scoped,color:/color="#a8071a"/.test(source.match(/<el-button\b[^>]*\bclass="commit-btn"[^>]*>/)?.[0]||'')?'#a8071a':undefined,running:source.includes("'is-running'")});
+}
+await import('element-plus/dist/index.css');
+await import('/src/assets/main.css');
+function luminance(rgb) {
+ const channels=rgb.match(/[\d.]+/g).slice(0,3).map(Number).map(c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4});
+ return .2126*channels[0]+.7152*channels[1]+.0722*channels[2];
+}
+const checks=new Map();
+function inspect(button){
+ const s=getComputedStyle(button),disabled=button.disabled,stop=button.classList.contains('is-running'),focus=button.matches(':focus-visible');
+ const expectedColor=disabled?'rgb(134, 144, 156)':stop?'rgb(168, 7, 26)':'rgb(255, 255, 255)';
+ const a=luminance(s.color),b=luminance(s.backgroundColor),contrast=(Math.max(a,b)+.05)/(Math.min(a,b)+.05),errors=[];
+ if(s.color!==expectedColor||(!disabled&&contrast<4.5))errors.push('文字颜色或对比度');
+ const active=button.matches(':active'),hover=button.matches(':hover');
+ const expectedBg=disabled?'rgb(250, 250, 250)':stop?(active?'rgb(255, 228, 230)':hover?'rgb(255, 241, 242)':'rgb(255, 255, 255)'):(active?'rgb(138, 5, 21)':hover?'rgb(193, 17, 38)':'rgb(168, 7, 26)');
+ const expectedBorder=disabled?'rgb(229, 230, 235)':focus?(stop?'rgb(168, 7, 26)':'rgb(134, 5, 21)'):stop?'rgb(213, 73, 92)':expectedBg;
+ if(s.backgroundColor!==expectedBg||s.borderTopColor!==expectedBorder)errors.push('交互底色或边框色');
+ if(s.height!=='36px'||s.borderRadius!=='6px'||s.fontSize!=='14px'||s.fontWeight!=='500')errors.push('尺寸或字体');
+ if(s.borderTopWidth!==(focus&&!disabled?'2px':'1px')||s.outlineStyle!=='none'||s.boxShadow!=='none')errors.push('单框聚焦');
+ if(disabled&&s.backgroundColor!=='rgb(250, 250, 250)')errors.push('禁用底色');
+ if(button.classList.contains('is-loading')&&getComputedStyle(button,'::before').backgroundColor!=='rgba(0, 0, 0, 0)')errors.push('加载蒙层改变实际配色');
+ const spinner=button.querySelector('.el-icon.is-loading');
+ if(spinner){const animation=getComputedStyle(spinner);if(matchMedia('(prefers-reduced-motion:reduce)').matches?animation.animationName!=='none':animation.animationDuration!=='2s'||animation.animationTimingFunction!=='linear')errors.push('加载动画');}
+ const key=button.dataset.case,result={pass:!errors.length,errors,focus,disabled};checks.set(key,result);
+ const failures=[...checks.entries()].filter(([,value])=>!value.pass);
+ document.getElementById('summary').textContent=`${failures.length?'FAIL':'PASS'}：${checks.size} 个按钮，${failures.length} 个失败`;
+ document.getElementById('summary').dataset.failures=String(failures.length);
+ button.parentElement.querySelector('output').textContent=`${errors.length?'FAIL':'PASS'} ${key}${focus?' · 键盘聚焦':''}${errors.length?'：'+errors.join('、'):''}`;
+ button.dataset.result=errors.length?'FAIL':'PASS';
+ if(active)button.dataset.pressedResult=errors.length?'FAIL':'PASS';
+}
+function schedule(event){const button=event.currentTarget;setTimeout(()=>inspect(button),130);}
+createApp({render:()=>h('main',[h('p',{id:'summary'},'等待检查'),...cases.map(c=>h('section',[h('h2',c.name),...['execute',...(c.running?['stop']:[]),'disabled'].map(kind=>h(ElButton,{...c.scoped,color:c.color,class:['commit-btn',kind==='stop'||(kind==='disabled'&&c.running)?'is-running':''],disabled:kind==='disabled',loading:kind==='disabled','data-case':`${c.name}:${kind}`,onFocus:schedule,onBlur:schedule,onMouseenter:schedule,onMouseleave:schedule,onPointerdown:schedule,onPointerup:schedule,onKeydown:schedule,onClick:schedule},()=>kind==='stop'?'停止任务':kind==='disabled'?(c.running?'正在停止…':'执行中…'):'立即执行')),h('output','等待检查')]))])}).mount('#app');
+await nextTick();setTimeout(()=>document.querySelectorAll('button[data-case]').forEach(inspect),130);
+</script></html>

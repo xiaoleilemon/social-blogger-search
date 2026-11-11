@@ -1,0 +1,100 @@
+@import 'reset-css';
+@import './typography.css';
+
+:root {
+  --el-color-primary: #a8071a;
+  --el-color-primary-light-3: #c43344;
+  --el-color-primary-light-5: #d65b6a;
+  --el-color-primary-light-7: #e88391;
+  --el-color-primary-light-8: #f1a7b2;
+  --el-color-primary-light-9: #f8c9cf;
+  --el-color-primary-dark-2: #860515;
+}
+
+body { margin: 0; font-family: var(--app-font-family); }
+button, input, textarea { font: inherit; }
+
+/* 长提示换行后保留行距，并与插件两侧保持留白。 */
+:root .el-message {
+  max-width: calc(100% - 48px);
+}
+.el-message .el-message__content {
+  min-width: 0;
+  line-height: 22px;
+}
+
+/* 统一任务按钮；业务状态继续由页面原有 loading / stopping / recovery 拥有。 */
+:root .el-button.commit-btn {
+  --el-button-hover-text-color: #fff;
+  --el-button-hover-bg-color: #c11126;
+  --el-button-active-text-color: #fff;
+  --el-button-active-bg-color: #8a0515;
+  box-sizing: border-box;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #a8071a;
+  border-radius: 6px;
+  background: #a8071a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  box-shadow: none;
+  transition: background-color 100ms linear, color 100ms linear, border-color 100ms linear;
+}
+:root .el-button.commit-btn:hover:enabled:not(.is-loading) {
+  background: #c11126;
+  border-color: #c11126;
+  color: #fff;
+}
+:root .el-button.commit-btn:active:enabled:not(.is-loading) {
+  background: #8a0515;
+  border-color: #8a0515;
+  color: #fff;
+}
+:root .el-button.commit-btn.is-running {
+  background: #fff;
+  border-color: #d5495c;
+  color: #a8071a;
+}
+:root .el-button.commit-btn.is-running:hover:enabled:not(.is-loading) {
+  background: #fff1f2;
+  border-color: #d5495c;
+  color: #a8071a;
+}
+:root .el-button.commit-btn.is-running:active:enabled:not(.is-loading) {
+  background: #ffe4e6;
+  border-color: #d5495c;
+  color: #a8071a;
+}
+/* 键盘聚焦只强化原边框，取消 Element Plus 外圈；border-box 保持外部尺寸。 */
+:root .el-button.commit-btn:focus-visible:enabled:not(.is-loading) {
+  border: 2px solid #860515;
+  outline: none;
+  box-shadow: none;
+}
+:root .el-button.commit-btn.is-running:focus-visible:enabled:not(.is-loading) {
+  border-color: #a8071a;
+}
+:root .el-button.commit-btn:disabled,
+:root .el-button.commit-btn.is-disabled,
+:root .el-button.commit-btn.is-loading {
+  border: 1px solid #e5e6eb;
+  background: #fafafa;
+  color: #86909c;
+  outline: none;
+  box-shadow: none;
+  cursor: not-allowed;
+  transition: none;
+}
+/* 保留加载时的交互保护，避免默认白色蒙层再次淡化禁用配色。 */
+:root .el-button.commit-btn.is-loading::before { background: transparent; }
+:root .el-button.commit-btn .el-icon.is-loading {
+  animation-duration: 2s;
+  animation-timing-function: linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .el-button.commit-btn { transition: none; }
+  :root .el-button.commit-btn .el-icon.is-loading { animation: none; }
+}
