@@ -41,3 +41,18 @@ test('生产接口地址由环境注入，构造路径时保留绝对 URL', asyn
     assert.equal(buildApiUrl('https://example.com/existing'), 'https://example.com/existing');
   } finally { await host.close(); }
 });
+
+for (const [mode, base] of [
+  ['development', ''], ['development-prod', ''],
+  ['test', 'https://test-lotto.weiyoubot.cn'], ['production', 'https://api.socialdatax.com'],
+]) {
+  test(`${mode} 环境文件同时提供新旧接口基址`, async () => {
+    const host = await loadModules(['/src/utils/request.js'], mode);
+    try {
+      const api = host.modules[0];
+      assert.equal(api.FEISHU_API_BASE_URL, base);
+      assert.equal(api.buildFeishuApiPath('/v1/feishu/search/suggestions'), '/socialdatax/api/v1/feishu/search/suggestions');
+      if (mode === 'production') assert.equal(api.API_BASE_URL, 'https://api.52choujiang.cn');
+    } finally { await host.close(); }
+  });
+}

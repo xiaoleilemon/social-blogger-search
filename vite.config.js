@@ -11,10 +11,16 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const proxyTarget = process.env.VITE_DEV_PROXY_TARGET || env.VITE_DEV_PROXY_TARGET || 'https://test-lotto.weiyoubot.cn'
 
+  const feishuProxyTarget = process.env.VITE_FEISHU_DEV_PROXY_TARGET || env.VITE_FEISHU_DEV_PROXY_TARGET || 'https://test-lotto.weiyoubot.cn'
+
   return {
     server: {
       host: true,
       proxy: {
+        '/socialdatax/api': {
+          target: feishuProxyTarget,
+          changeOrigin: true,
+        },
         '/social/api': {
           target: proxyTarget,
           changeOrigin: true,
