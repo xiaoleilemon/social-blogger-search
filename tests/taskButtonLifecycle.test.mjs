@@ -1107,3 +1107,46 @@ test('独立作者真实Vue：半填映射无逐行提示，执行仍拦截', as
   f.view.mappingDraft.value = []; await flush();
   assert.doesNotMatch(await f.html(), /class="mapping-validation"/);
 });
+
+
+test('迁移：新作者任务保存来源，状态、结果、停止与云配置使用新接口', async t => {
+  const host = await mount(t);
+  host.view.form.value.keyword = '猫';
+  host.view.form.value.social_type = 'douyin';
+  await host.view.handleTaskAction();
+  const saved = host.state.saved[storageKey];
+  assert.equal(saved.apiBaseUrl, '');
+  assert.equal(saved.apiPathPrefix, '/socialdatax/api');
+  await host.view.handleTaskAction();
+  for (const suffix of ['task', 'task?task_id=new', 'list', 'task/cancel']) {
+    const call = host.requests.find(c => c.url === `/socialdatax/api/v1/feishu/blogger/search/${suffix}`);
+    assert.ok(call, suffix);
+    assert.equal(call.baseURL, '');
+  }
+  assert.ok(host.requests.some(c => c.url === '/socialdatax/api/v1/feishu/profile-fetch/table-output-configs'));
+  assert.equal(saved.formData.keyword, '猫');
+  assert.equal(saved.targetTableId, '');
+});
+
+for (const [label, source, base, prefix] of [
+  ['无来源旧任务', {}, '', '/social/api'],
+  ['旧域名快照', { apiBaseUrl: 'https://legacy.example', apiPathPrefix: '/social/api' }, 'https://legacy.example', '/social/api'],
+  ['新域名快照', { apiBaseUrl: 'https://saved.example', apiPathPrefix: '/socialdatax/api' }, 'https://saved.example', '/socialdatax/api'],
+  ['显式空来源', { apiBaseUrl: '', apiPathPrefix: '' }, '', ''],
+]) {
+  test(`迁移：${label}恢复和停止保留原任务及游标`, async t => {
+    const host = await mount(t, host => {
+      host.state.saved[storageKey] = { taskId: 'old/task', baseId: 'base-1', cursor: 'cursor-2', ...source };
+    });
+    await host.view.handleTaskAction();
+    const calls = host.requests.filter(c => c.url.includes('/blogger/search/'));
+    assert.deepEqual(calls.map(c => [c.baseURL, c.url]), [
+      [base, `${prefix}/v1/feishu/blogger/search/task?task_id=old%2Ftask`],
+      [base, `${prefix}/v1/feishu/blogger/search/list`],
+      [base, `${prefix}/v1/feishu/blogger/search/task/cancel`],
+    ]);
+    assert.equal(calls[1].data.after_id, 'cursor-2');
+    assert.equal(calls[2].data.task_id, 'old/task');
+    assert.equal(host.state.saved[storageKey].cursor, 'cursor-2');
+  });
+}

@@ -1,7 +1,7 @@
 <script setup>
 import { bitable } from '@lark-base-open/js-sdk';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import request from '@/utils/request';
+import { feishuRequest as request, API_BASE_URL, FEISHU_API_BASE_URL, FEISHU_API_PATH_PREFIX, LEGACY_FEISHU_API_PATH_PREFIX, buildFeishuApiPath } from '@/utils/request';
 import { BLOGGER_FIELD_MAPPING, getDefaultSelectedFieldKeys, showErrorMsg, useBloggerData } from '@/composables/useBloggerData';
 import { useIncrementalTask } from '@/composables/useIncrementalTask';
 import { getOrderedTableFields } from '@/utils/tableFields';
@@ -12,8 +12,8 @@ import { useTaskFeedback } from '@/composables/useTaskFeedback.mjs';
 const props = defineProps({ api_key: { type: String, required: true }, apiKeySaving: Boolean });
 const emit = defineEmits(['task-state']);
 const TASK_PLUGIN_TYPE = 'blogger_search';
-const TABLE_CONFIG_API_PATH = '/social/api/v1/feishu/profile-fetch/table-output-config';
-const TABLE_CONFIGS_API_PATH = '/social/api/v1/feishu/profile-fetch/table-output-configs';
+const TABLE_CONFIG_API_PATH = buildFeishuApiPath('/v1/feishu/profile-fetch/table-output-config');
+const TABLE_CONFIGS_API_PATH = buildFeishuApiPath('/v1/feishu/profile-fetch/table-output-configs');
 const form = ref({ social_type: '', keyword: '', rangeType: 'pages', pages: 1, radio: 1, table_id: '', writeMode: 'upsert', follower_count_range: 'all', user_type: 'all' });
 const tableOptions = ref([]);
 const tableFieldOptions = ref([]);
@@ -82,11 +82,14 @@ const onTaskReady = async (task, restoring = false) => {
   }
 };
 
+// 未保存后端来源的历史任务继续请求旧后端。
+const bloggerTaskApiPath = (task, path) => buildFeishuApiPath(path, task.apiPathPrefix ?? LEGACY_FEISHU_API_PATH_PREFIX);
+
 const searchTask = useIncrementalTask({
   storageKey,
   isTerminal: status => [1, 2, 3].includes(Number(status.status)),
-  getStatus: async task => (await request({ url: `/social/api/v1/feishu/blogger/search/task?task_id=${encodeURIComponent(task.taskId)}`, method: 'get', headers: auth() })).data,
-  getResults: async task => (await request({ url: '/social/api/v1/feishu/blogger/search/list', method: 'post', headers: auth(), data: { task_id: task.taskId, after_id: task.cursor || '', limit: 40 } })).data,
+  getStatus: async task => (await request({ url: `${bloggerTaskApiPath(task, '/v1/feishu/blogger/search/task')}?task_id=${encodeURIComponent(task.taskId)}`, baseURL: task.apiBaseUrl ?? API_BASE_URL, method: 'get', headers: auth() })).data,
+  getResults: async task => (await request({ url: bloggerTaskApiPath(task, '/v1/feishu/blogger/search/list'), baseURL: task.apiBaseUrl ?? API_BASE_URL, method: 'post', headers: auth(), data: { task_id: task.taskId, after_id: task.cursor || '', limit: 40 } })).data,
   writeBatch: async (items, task, controls) => {
     task.appendState ||= {};
     const result = await createAndWriteData(items, task.targetTableId ? 'stream' : '', task.taskId, task.targetTableId || '', task.selectedFieldKeys, {
@@ -268,7 +271,7 @@ const cancel = async () => {
   if (!task?.taskId || cancelling.value) return;
   cancelling.value = true; showToast(getStoppingText());
   try {
-    const response = await request({ url: '/social/api/v1/feishu/blogger/search/task/cancel', method: 'post', headers: auth(), data: { task_id: task.taskId } });
+    const response = await request({ url: bloggerTaskApiPath(task, '/v1/feishu/blogger/search/task/cancel'), baseURL: task.apiBaseUrl ?? API_BASE_URL, method: 'post', headers: auth(), data: { task_id: task.taskId } });
     if (response.data?.sta !== 0) throw new Error(response.data?.msg || '停止任务失败');
   } catch (error) {
     if (searchTask.getActiveTask() !== task) return;
@@ -333,13 +336,13 @@ const submit = async () => {
     if (componentUnmounted) return;
     const filter_config = formData.social_type === 'douyin' ? { follower_count_range: formData.follower_count_range, user_type: formData.user_type } : {};
     await searchTask.submit(async () => {
-      const response = await request({ url: '/social/api/v1/feishu/blogger/search/task', method: 'post', headers: auth(), data: { social_type: formData.social_type, keyword: keywords, pages: formData.rangeType === 'all' ? 0 : Number(formData.pages), filter_config } });
+      const response = await request({ url: buildFeishuApiPath('/v1/feishu/blogger/search/task'), method: 'post', headers: auth(), data: { social_type: formData.social_type, keyword: keywords, pages: formData.rangeType === 'all' ? 0 : Number(formData.pages), filter_config } });
       if (response.data?.sta !== 0) throw new Error(response.data?.msg || '创建任务失败');
       const task = response.data.data;
       const id = task?.task_id;
       if (!id) throw new Error('创建任务未返回任务ID');
       if (!componentUnmounted) showToast('任务已创建，正在准备获取作者…');
-      return { taskId: id, formData, tableName: keywords[0], totalPages: Number(task.total) || 0, ...outputSnapshot };
+      return { taskId: id, apiBaseUrl: FEISHU_API_BASE_URL, apiPathPrefix: FEISHU_API_PATH_PREFIX, formData, tableName: keywords[0], totalPages: Number(task.total) || 0, ...outputSnapshot };
     }, onTaskReady);
   } catch (error) {
     if (componentUnmounted) return;
