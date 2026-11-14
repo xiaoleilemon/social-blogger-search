@@ -26,7 +26,7 @@ npm test
 npm run build
 ```
 
-GitLab 同步会保留 GitHub 自己的环境文件，并同步内部已经构建好的 `dist/`。直接使用该产物无需再次设置变量；若在 GitHub 或本地重新构建，须显式提供两个基址，或在该仓库的生产环境文件中配置：
+GitLab 同步会从内部同步根目录的 `.env.development-prod`，统一 `dev:prod` 的新旧生产代理；其他环境文件（包括 `.env.production` 和所有本地覆盖文件）继续保留 GitHub 现状。同步也包含内部已经构建好的 `dist/`。直接使用该产物无需再次设置变量；若在 GitHub 或本地重新构建，须显式提供两个基址，或在该仓库的生产环境文件中配置：
 
 ```sh
 VITE_API_BASE_URL=https://api.52choujiang.cn \
