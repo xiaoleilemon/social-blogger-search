@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | 生产 | `https://api.socialdatax.com` | `https://api.52choujiang.cn` |
 | 测试 | `https://test-lotto.weiyoubot.cn` | 沿用该环境的 `VITE_API_BASE_URL` |
-| 本地开发 | `/`，由 Vite 的 `/socialdatax/api` 代理到测试服 | 沿用 `/social/api` 代理 |
+| 本地开发 | `/`，由 Vite 的 `/socialdatax/api` 代理到 `https://api.socialdatax.com` | `/social/api` 代理到 `https://api.52choujiang.cn` |
 
 生产构建在 `.env.production` 中分别配置 `VITE_FEISHU_API_BASE_URL` 和 `VITE_API_BASE_URL`；用户 API Key 由插件输入，不能写入环境变量或产物。源码与 `dist/` 一起提交。构建完成后才更新插件发布版本：
 

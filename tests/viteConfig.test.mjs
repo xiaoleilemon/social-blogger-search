@@ -50,8 +50,8 @@ const getProxyTarget = async mode => {
   return config.server.proxy['/social/api'].target;
 };
 
-test('开发模式默认代理测试后端', async () => {
-  assert.equal(await getProxyTarget('development'), 'https://test-lotto.weiyoubot.cn');
+test('开发模式默认代理生产后端', async () => {
+  assert.equal(await getProxyTarget('development'), 'https://api.52choujiang.cn');
 });
 
 test('development-prod 同源请求由新旧代理分别转发到生产后端', async () => {
@@ -63,7 +63,7 @@ test('development-prod 同源请求由新旧代理分别转发到生产后端', 
 });
 
 for (const [mode, expected] of [
-  ['development', 'https://test-lotto.weiyoubot.cn'],
+  ['development', 'https://api.socialdatax.com'],
   ['development-prod', 'https://api.socialdatax.com'],
 ]) {
   test(`${mode} 新接口使用独立代理`, async () => {

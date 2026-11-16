@@ -9,9 +9,9 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const proxyTarget = process.env.VITE_DEV_PROXY_TARGET || env.VITE_DEV_PROXY_TARGET || 'https://test-lotto.weiyoubot.cn'
+  const proxyTarget = process.env.VITE_DEV_PROXY_TARGET || env.VITE_DEV_PROXY_TARGET || 'https://api.52choujiang.cn'
 
-  const feishuProxyTarget = process.env.VITE_FEISHU_DEV_PROXY_TARGET || env.VITE_FEISHU_DEV_PROXY_TARGET || 'https://test-lotto.weiyoubot.cn'
+  const feishuProxyTarget = process.env.VITE_FEISHU_DEV_PROXY_TARGET || env.VITE_FEISHU_DEV_PROXY_TARGET || 'https://api.socialdatax.com'
 
   return {
     server: {
