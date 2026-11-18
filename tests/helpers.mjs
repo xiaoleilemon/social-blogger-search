@@ -77,6 +77,7 @@ export function fakeTable(id, name, fields = [], records = []) {
   const field = meta => ({
     id: meta.id,
     getType: async () => meta.type,
+    getValue: async recordId => table.records.find(record => record.recordId === recordId).fields[meta.id],
     setFormatter: async formatter => { meta.formatter = formatter; },
     setDateFormat: async format => { meta.dateFormat = format; },
     createCell: async value => ({ fieldId: meta.id, value, getValue: async () => value }),
