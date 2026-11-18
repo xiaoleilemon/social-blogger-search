@@ -14,8 +14,12 @@ const withEnvFiles = async callback => {
   const previousCwd = process.cwd();
   const envDir = fs.mkdtempSync(path.join(os.tmpdir(), 'feishu-proxy-env-'));
   try {
+    const defaultEnv = 'VITE_API_BASE_URL=/\n'
+      + 'VITE_FEISHU_API_BASE_URL=/\n'
+      + 'VITE_DEV_PROXY_TARGET=https://api.52choujiang.cn\n'
+      + 'VITE_FEISHU_DEV_PROXY_TARGET=https://api.socialdatax.com\n';
     for (const name of ['.env.development', '.env.development-prod']) {
-      fs.copyFileSync(path.join(root, name), path.join(envDir, name));
+      fs.writeFileSync(path.join(envDir, name), defaultEnv);
     }
     process.chdir(envDir);
     return await callback(envDir);
@@ -60,6 +64,19 @@ test('development-prod 同源请求由新旧代理分别转发到生产后端', 
   assert.equal(api.buildFeishuApiUrl(api.buildFeishuApiPath('/v1/feishu/example')), '/socialdatax/api/v1/feishu/example');
   assert.equal(config.server.proxy['/social/api'].target, 'https://api.52choujiang.cn');
   assert.equal(config.server.proxy['/socialdatax/api'].target, 'https://api.socialdatax.com');
+});
+
+test('受管 development-prod 环境文件仍使用新旧生产后端', async () => {
+  await withCleanProxyEnv(() => withEnvFiles(async envDir => {
+    fs.copyFileSync(path.join(root, '.env.development-prod'), path.join(envDir, '.env.development-prod'));
+    const mode = 'development-prod';
+    const api = loadRequestModule(loadEnv(mode, envDir, 'VITE_'));
+    const { config } = await loadConfigFromFile({ command: 'serve', mode }, configFile, envDir);
+    assert.equal(api.API_BASE_URL, '');
+    assert.equal(api.FEISHU_API_BASE_URL, '');
+    assert.equal(config.server.proxy['/social/api'].target, 'https://api.52choujiang.cn');
+    assert.equal(config.server.proxy['/socialdatax/api'].target, 'https://api.socialdatax.com');
+  }));
 });
 
 for (const [mode, expected] of [
@@ -132,7 +149,7 @@ test('本地环境文件不干扰默认配置测试，运行时仍应用本地�
       + 'VITE_FEISHU_DEV_PROXY_TARGET=https://local-feishu-proxy.example\n';
     fs.writeFileSync(path.join(envDir, '.env.local'), overrides);
     for (const [mode, legacy, feishu] of [
-      ['development', 'https://test-lotto.weiyoubot.cn', 'https://test-lotto.weiyoubot.cn'],
+      ['development', 'https://api.52choujiang.cn', 'https://api.socialdatax.com'],
       ['development-prod', 'https://api.52choujiang.cn', 'https://api.socialdatax.com'],
     ]) {
       fs.writeFileSync(path.join(envDir, `.env.${mode}.local`), overrides);
