@@ -673,8 +673,12 @@ for (const rangeType of ['pages', 'all']) {
     await old.view.handleTaskAction();
     assert.deepEqual(old.state.saved[storageKey].formData, original);
     const sent = old.requests.find(config => config.method === 'post' && config.url.endsWith('/blogger/search/task'));
-    assert.deepEqual(sent.data.keyword, ['浓缩', '拿铁']);
-    assert.equal(sent.data.pages, rangeType === 'all' ? 0 : 2);
+    assert.deepEqual(sent.data, {
+      social_type: 'douyin', keyword: ['浓缩', '拿铁'], pages: rangeType === 'all' ? 0 : 2,
+      filter_config: { follower_count_range: '1000_10000', user_type: 'personal' },
+      selected_field_keys: ['user_id', 'nickname', 'social_type'],
+    });
+    assert.deepEqual(old.state.saved[storageKey].selectedFieldKeys, sent.data.selected_field_keys);
     old.unmount();
     // 后来的字段偏好不能覆盖当前任务实际选择。
     old.state.saved.blogger_search_selected_fields_v1 = ['user_id', 'avatar'];
