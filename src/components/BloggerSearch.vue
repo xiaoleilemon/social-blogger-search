@@ -336,7 +336,13 @@ const submit = async () => {
     if (componentUnmounted) return;
     const filter_config = formData.social_type === 'douyin' ? { follower_count_range: formData.follower_count_range, user_type: formData.user_type } : {};
     await searchTask.submit(async () => {
-      const response = await request({ url: buildFeishuApiPath('/v1/feishu/blogger/search/task'), method: 'post', headers: auth(), data: { social_type: formData.social_type, keyword: keywords, pages: formData.rangeType === 'all' ? 0 : Number(formData.pages), filter_config } });
+      const response = await request({
+        url: buildFeishuApiPath('/v1/feishu/blogger/search/task'), method: 'post', headers: auth(),
+        data: {
+          social_type: formData.social_type, keyword: keywords, pages: formData.rangeType === 'all' ? 0 : Number(formData.pages),
+          filter_config, selected_field_keys: outputSnapshot.selectedFieldKeys,
+        },
+      });
       if (response.data?.sta !== 0) throw new Error(response.data?.msg || '创建任务失败');
       const task = response.data.data;
       const id = task?.task_id;
